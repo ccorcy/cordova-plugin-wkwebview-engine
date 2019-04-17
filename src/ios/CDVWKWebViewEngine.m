@@ -97,13 +97,6 @@
 
     // re-create WKWebView, since we need to update configuration
     WKWebView* wkWebView = [[WKWebView alloc] initWithFrame:self.engineWebView.frame configuration:configuration];
-
-#if __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000
-    if (@available(iOS 11.0, *)) {
-        [wkWebView.scrollView setContentInsetAdjustmentBehavior:UIScrollViewContentInsetAdjustmentNever];
-    }
-#endif
-    
     wkWebView.UIDelegate = self.uiDelegate;
     self.engineWebView = wkWebView;
 
@@ -133,6 +126,10 @@
         addObserver:self
            selector:@selector(onAppWillEnterForeground:)
                name:UIApplicationWillEnterForegroundNotification object:nil];
+    [[NSNotificationCenter defaultCenter]
+     addObserver:self
+     selector:@selector(keyboardWillHide)
+     name:UIKeyboardWillHideNotification object:nil];
 
     NSLog(@"Using WKWebView");
 
@@ -283,7 +280,6 @@ static void * KVOContext = &KVOContext;
     }
 
     wkWebView.allowsBackForwardNavigationGestures = [settings cordovaBoolSettingForKey:@"AllowBackForwardNavigationGestures" defaultValue:NO];
-    wkWebView.allowsLinkPreview = [settings cordovaBoolSettingForKey:@"Allow3DTouchLinkPreview" defaultValue:YES];
 }
 
 - (void)updateWithInfo:(NSDictionary*)info
@@ -464,6 +460,20 @@ static void * KVOContext = &KVOContext;
 
     return decisionHandler(NO);
 }
+
+- (void)keyboardWillHide
+{
+    if (@available(iOS 12.0, *)) {
+        WKWebView *webview = (WKWebView*) self.webView;
+        for (UIView* v in webview.subviews ){
+            if ([v isKindOfClass:NSClassFromString(@"WKScrollView")]) {
+                UIScrollView *scrollView = (UIScrollView*)v;
+                [scrollView setContentOffset:CGPointMake(0, 0)];
+            }
+        }
+    }
+}
+
 
 #pragma mark - Plugin interface
 
